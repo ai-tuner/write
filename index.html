@@ -340,8 +340,8 @@ async function savePDF() {
       pdf.addPage([w, h], h > w ? "portrait" : "landscape");
     }
 
-    // 3. Draw the Background Color (Matching your #fdfcf8)
-    pdf.setFillColor(253, 252, 248); // RGB for #fdfcf8
+    // 3. Draw the Background Color (Matching your #ffffff)
+    pdf.setFillColor(255, 255, 255); // RGB for #ffffff
     pdf.rect(0, 0, w, h, 'F');
 
     page.forEach(path => {
@@ -388,6 +388,7 @@ function refreshPage(){ location.reload(); }
 </script>
 </body>
 </html>
+
 
 
 
