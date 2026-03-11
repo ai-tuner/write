@@ -271,41 +271,55 @@ function redraw() {
     ctx.fillRect(-originX, -originY, canvas.width / ratio / scale, canvas.height / ratio / scale);
     
     pages[currentPage].forEach(path => {
+        if (path.points.length < 2) return;
+
         ctx.lineCap = "round";
         ctx.lineJoin = "round";
-        ctx.globalCompositeOperation = "source-over"; // Keep it simple for export/redraw
+        ctx.globalCompositeOperation = "source-over";
 
-        ctx.beginPath();
-        for (let i = 1; i < path.points.length; i++) {
-            let prev = path.points[i - 1];
-            let curr = path.points[i];
-
-            if (path.tool === "eraser") {
-                ctx.strokeStyle = "#ffffff"; // Redraw eraser as white
+        // Set Styles based on the tool used for this specific path
+        if (path.tool === "eraser") {
+            ctx.strokeStyle = "#ffffff";
+            ctx.globalAlpha = 1;
+            ctx.lineWidth = path.size * 10;
+        } else {
+            ctx.strokeStyle = path.color;
+            if (path.tool === "highlighter") {
+                ctx.globalAlpha = 0.25;
+                ctx.lineWidth = path.size * 4;
+            } else if (path.tool === "pen") {
                 ctx.globalAlpha = 1;
-                ctx.lineWidth = path.size * 10;
-            } else {
-                ctx.strokeStyle = path.color;
-                if (path.tool === "highlighter") {
-                    ctx.globalAlpha = 0.25;
-                    ctx.lineWidth = path.size * 4;
-                } else if (path.tool === "pen") {
-                    ctx.globalAlpha = 1;
-                    ctx.lineWidth = path.size * (0.5 + (curr.pressure || 0.5) * 1.5);
-                } else if (path.tool === "pencil") {
-                    ctx.globalAlpha = 0.6 + (curr.pressure || 0.5) * 0.4;
-                    ctx.lineWidth = path.size * (0.3 + (curr.pressure || 0.5) * 1.2);
-                }
+                // Note: pressure varies per point, but for a simple redraw 
+                // we use a consistent width or the first point's pressure
+                ctx.lineWidth = path.size * (0.5 + (path.points[0].pressure || 0.5) * 1.5);
+            } else if (path.tool === "pencil") {
+                ctx.globalAlpha = 0.6;
+                ctx.lineWidth = path.size * (0.3 + (path.points[0].pressure || 0.5) * 1.2);
             }
-            // Move to prevent continuous line artifacts between paths
-            if (i === 1) ctx.moveTo(prev.x, prev.y);
-            ctx.lineTo(curr.x, curr.y);
         }
-        ctx.stroke();
+
+        // --- DRAW PATH ONCE ---
+        ctx.beginPath();
+        let i;
+        ctx.moveTo(path.points[0].x, path.points[0].y);
+
+        // Using quadratic curves for smoothing, just like in draw()
+        for (i = 1; i < path.points.length - 2; i++) {
+            const xc = (path.points[i].x + path.points[i + 1].x) / 2;
+            const yc = (path.points[i].y + path.points[i + 1].y) / 2;
+            ctx.quadraticCurveTo(path.points[i].x, path.points[i].y, xc, yc);
+        }
+        
+        // For the last 2 points
+        if (path.points[i]) {
+            ctx.quadraticCurveTo(path.points[i].x, path.points[i].y, path.points[i+1].x, path.points[i+1].y);
+        }
+
+        ctx.stroke(); // Stroking once outside the point loop fixes the "bold" issue
     });
+    
     ctx.globalAlpha = 1;
 }
-
 /* ---------- ZOOM ---------- */
         canvas.addEventListener("touchstart", e => {
             if (e.touches.length === 2) {
@@ -432,6 +446,7 @@ function refreshPage(){ location.reload(); }
 </script>
 </body>
 </html>
+
 
 
 
